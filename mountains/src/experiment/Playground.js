@@ -45,40 +45,68 @@ Playground.prototype = {
 
     initMeshes: function() {
         this.planeGeometry = new THREE.PlaneGeometry(500, 500, this.quadNumbers, this.quadNumbers);
-        // this.planeMaterial = new THREE.MeshLambertMaterial({color: 0x0000CC});
-        // this.planeMaterial = new THREE.MeshLambertMaterial({color: 0x111111});
-        this.planeMaterial = new THREE.MeshPhongMaterial({ambient: 0xCCCCCC, color: 0xCCCCCC, specular: 0xBBBBCC, shininess: 50, shading: THREE.SmoothShading});
+        this.planeMaterial = new THREE.MeshPhongMaterial({color: 0x2899EB, shading: THREE.FlatShading});
 
         this.planeMesh = new THREE.Mesh(this.planeGeometry, this.planeMaterial);
-        // this.lineMesh = new THREE.Mesh(this.planeGeometry, new THREE.MeshBasicMaterial({color: 0x00CCCC, wireframe: true}));
-        // this.lineMesh.position.z = -1;
-
-        this.planeMesh.castShadow = true;
-        this.planeMesh.receiveShadow = false;
 
         this.scene.add(this.planeMesh);
-        // this.scene.add(this.lineMesh);
 
         var vertices = this.planeGeometry.vertices;
 
         var middleVerticeIndex = this.quadNumbers * this.quadNumbers / 2;
-
         for(var i = 0; i < this.quadNumbers; i++) {
-            this.createMountain(this.quadNumbers * i + MathHelper.randInt(-10, 10), vertices, 30);
+            this.createMountain(this.quadNumbers * i + MathHelper.randInt(-10, 10), vertices, 50);
             if(i % 2) {
-                this.createMountain(this.quadNumbers / 2 * i, vertices, 120);
-                this.createMountain(this.quadNumbers * this.quadNumbers - this.quadNumbers / 2 * i, vertices, 120);
+                this.createMountain(this.quadNumbers / 2 * i, vertices, 140);
+                this.createMountain(this.quadNumbers * this.quadNumbers - this.quadNumbers / 2 * i, vertices, 150);
             }
         }
+
+        this.updateGeometry(this.planeMesh.geometry);
+
+        this.waterMesh = new THREE.Mesh(new THREE.PlaneGeometry(500, 500, this.quadNumbers, this.quadNumbers), new THREE.MeshPhongMaterial({color: 0x00FFCC, shading: THREE.FlatShading/*, transparent: true, opacity: 0.9*/}));
+        this.scene.add(this.waterMesh);
+        this.waterMesh.position.z = 5;
+        for(i = 0; i < this.quadNumbers * this.quadNumbers; i++) {
+            if(i%2) {
+                this.createMountain(i, this.waterMesh.geometry.vertices, 20);
+            }
+        }
+
+        this.waterPosition = [];
+
+        vertices = this.waterMesh.geometry.vertices;
+        for(i = 0; i < vertices.length; i++) {
+            this.waterPosition.push(vertices[i].z);
+        }
+
+        this.updateGeometry(this.waterMesh.geometry);
+    },
+
+    updateGeometry: function(geometry) {
+        geometry.computeFaceNormals();
     },
 
     initLights: function() {
-        this.spotLight = new THREE.SpotLight(0xDCAF00);
+        this.spotLight = new THREE.SpotLight(0xFFFFFF, 2, 10000);
         this.spotLight.castShadow = true;
+        this.spotLight.position.x = 500;
         this.scene.add(this.spotLight);
 
-        this.ambientLight = new THREE.AmbientLight(0x221100);
-        this.ambientLight.z = 150;
+        /*this.spotLightHelper = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 8), new THREE.MeshBasicMaterial({color: 0x2899EB}));
+        this.spotLightHelper.position = this.spotLight.position;
+        this.scene.add(this.spotLightHelper);*/
+
+        this.oppositeSpotLight = new THREE.SpotLight(0xEB2899, 2, 10000);
+        this.oppositeSpotLight.castShadow = true;
+        this.oppositeSpotLight.position.x = 500;
+        this.scene.add(this.oppositeSpotLight);
+
+        /*this.oppositeSpotLightHelper = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 8), new THREE.MeshBasicMaterial({color: 0xEB2899}));
+        this.oppositeSpotLightHelper.position = this.spotLight.position;
+        this.scene.add(this.oppositeSpotLightHelper);*/
+
+        this.ambientLight = new THREE.AmbientLight(0x121212);
         this.scene.add(this.ambientLight);
     },
 
@@ -98,7 +126,13 @@ Playground.prototype = {
     customRender: function() {
         var time = Date.now() * 0.0005;
 
-        this.spotLight.position.set(Constants.spotLightX, Constants.spotLightY, Constants.spotLightZ);
+        this.spotLight.position.set(100 * Math.cos(time) * 3, 100 * Math.sin(time) * 3, 100);
+        // this.spotLightHelper.position = this.spotLight.position;
+
+        this.oppositeSpotLight.position.set(100 * Math.cos(time + Math.PI) * 3, 100 * Math.sin(time + Math.PI) * 3, 100);
+        // this.oppositeSpotLightHelper.position = this.oppositeSpotLight.position;
+
+        this.flowWater(this.waterMesh, this.waterPosition, time);
     },
 
     render: function()
@@ -115,6 +149,17 @@ Playground.prototype = {
         this.renderer.render(this.scene, this.camera);
 
         requestAnimationFrame(this.render.bind(this));
+    },
+
+    flowWater: function(mesh, positions, time) {
+        var vertices = mesh.geometry.vertices;
+        mesh.geometry.dynamic = true;
+        mesh.geometry.mergeVertices();
+        for(var i = 0; i < vertices.length; i++) {
+            vertices[i].z = positions[i] + positions[i] * Math.cos(time) * Math.sin(time);
+        }
+        mesh.geometry.verticesNeedUpdate = true;
+        mesh.geometry.computeFaceNormals();
     },
 
     debug: function() {
@@ -138,5 +183,9 @@ Playground.prototype = {
         planeAngle.add(Constants, 'planeAngleX').min(-Math.PI).max(Math.PI).step(0.01);
         planeAngle.add(Constants, 'planeAngleY').min(-Math.PI).max(Math.PI).step(0.01);
         planeAngle.add(Constants, 'planeAngleZ').min(-Math.PI).max(Math.PI).step(0.01);*/
+
+        // this.gui.addColor(Constants, 'firstLightColor').onChange(function(value) {
+        //     this.pointLight.color = value;
+        // }.bind(this));
     }
 };
