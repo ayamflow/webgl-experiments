@@ -16,6 +16,7 @@ Playground.prototype = {
     init: function()
     {
         this.quadNumbers = 20;
+        this.theta = 0;
 
         this.initRenderer();
         this.initMeshes();
@@ -23,7 +24,7 @@ Playground.prototype = {
         this.initText("SEA LEVEL");
         this.initBloom();
 
-        this.controls = new THREE.TrackballControls(this.camera);
+        this.controls = new THREE.TrackballControls(this.camera, this.renderer.domElement);
     },
 
     initRenderer: function() {
@@ -43,6 +44,7 @@ Playground.prototype = {
     initMeshes: function() {
         this.waterMesh = new THREE.Mesh(new THREE.PlaneGeometry(500, 500, this.quadNumbers, this.quadNumbers), new THREE.MeshPhongMaterial({color: 0x00FFCC, shading: THREE.FlatShading}));
         this.waterMesh.position.z = 5;
+        this.waterMesh.geometry.dynamic = true;
 
         var vertices = this.waterMesh.geometry.vertices;
         for(var i = 0; i < this.quadNumbers * this.quadNumbers; i++) {
@@ -97,9 +99,9 @@ Playground.prototype = {
     },
 
     initLights: function() {
-        this.spotLight = new THREE.SpotLight(0xFFFFFF, 2, 1000);
+        this.spotLight = new THREE.SpotLight(0xFFFFFF, 2, 800);
         this.spotLight.castShadow = true;
-        this.spotLight.position.set(100 * Math.cos(Math.PI / 2) * 3, 100 * Math.sin(Math.PI / 2) * 3, 100);
+        this.spotLight.position.set(100 * Math.cos(Math.PI / 2) * 3, 100 * Math.sin(Math.PI / 2) * 3, 500);
         this.scene.add(this.spotLight);
 
         this.spotLightHelper = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 8), new THREE.MeshBasicMaterial({color: 0x2899EB}));
@@ -164,12 +166,12 @@ Playground.prototype = {
 
     flowWater: function(mesh, positions, time) {
         var vertices = mesh.geometry.vertices;
-        mesh.geometry.dynamic = true;
-        mesh.geometry.mergeVertices();
         for(var i = 0; i < vertices.length; i++) {
-            vertices[i].z = positions[i] * Math.cos(time * 0.005 * i) * 2;
+            this.theta += 0.03;
+            vertices[i].z = positions[i] * Math.cos(time * 0.005 * (i + 1)) * 2;
         }
         mesh.geometry.verticesNeedUpdate = true;
+        mesh.geometry.normalsNeedUpdate = true;
         mesh.geometry.computeFaceNormals();
     },
 
